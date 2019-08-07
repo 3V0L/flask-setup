@@ -1,4 +1,10 @@
-from api import db
+import datetime
+
+from flask import abort
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+
+db = SQLAlchemy()
 
 class Users(db.Model):
     __tablename__ = "users"
@@ -6,8 +12,21 @@ class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=False, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(256), unique=False, nullable=False)
     projects_owned = db.relationship('Projects', backref='users', lazy=True)
     bids_sent = db.relationship('Bids', backref='users', lazy=True)
+
+    def save(self):
+        """Save user"""
+        self.password = generate_password_hash(self.password)
+        db.session.add(self)
+        db.session.commit()
+    
+    def get_user(email, password):
+        user = Users.query.filter_by(email=email).first()
+        if user is None or not check_password_hash(user.password, password):
+            abort(401, 'Invalid Email/Password entered')
+        return user
 
 
 class Projects(db.Model):
@@ -16,8 +35,10 @@ class Projects(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=False, nullable=False)
     description = db.Column(db.String(256), unique=False, nullable=False)
-    contract_value = db.Column(db.Numeric(precision=2), nullable=False)
-    percentage_return = db.Column(db.Numeric(precision=2), nullable=False)
+    contract_value = db.Column(db.Float(
+        precision=16, asdecimal=True, decimal_return_scale=2), nullable=False)
+    percentage_return = db.Column(db.Float(
+        precision=16, asdecimal=True, decimal_return_scale=2), nullable=False)
     start_date = db.Column(db.Date, unique=False, nullable=False)
     end_date = db.Column(db.Date, unique=False, nullable=False)
     active = db.Column(db.Boolean, default=True)
@@ -25,14 +46,83 @@ class Projects(db.Model):
         nullable=False)
     bids_received = db.relationship('Bids', backref='projects', lazy=True)
 
+    def save(self):
+        """Save user"""
+        db.session.add(self)
+        db.session.commit()
+
+    def get_project(project_id, bid_amount):
+        project = Projects.query.filter_by(id=project_id).first()
+        if project is None:
+            abort(400, 'This project Id is not in our system')
+        if project.end_date < datetime.date.today():
+            project.active = False
+            project.save()
+            abort(403, 'The end date for this project has passed.'
+                        ' You can no longer bid on it.')
+        
+        total_bids = 0
+        for item in project.bids_received:
+            total_bids = total_bids + float(item.amount)
+
+        if float(project.contract_value) - total_bids < 1 or \
+            project.end_date < datetime.date.today():
+            project.active = False
+            project.save()
+            abort(400, 'This project has been closed. No more' 
+                        ' investments are allowed')
+
+        if (total_bids + bid_amount) > project.contract_value:
+            abort(400, f'The amount you want to invest is too much.'
+                        ' You can only invest {}'.format(
+                            (float(project.contract_value) - total_bids)))
+        
+        return project
+    
+    def serialize(self):
+        data = {
+            "project_id": self.id,
+            "description": self.description,
+            "value": float(self.contract_value),
+            "percentage_return": float(self.percentage_return),
+            "start_date": self.start_date,
+            "end_date": self.end_date,
+            "owner": Users.query.filter_by(
+                email=self.user_email).first().username,
+        }
+
+        bids = []
+        for item in self.bids_received:
+            res = Bids.serialize(item)
+            bids.append(res) 
+        data['bids'] = bids
+
+        return data
+
 
 class Bids(db.Model):
     __tablename__ = "bids"
 
     id = db.Column(db.Integer, primary_key=True)
-    amount = db.Column(db.Numeric(precision=2), nullable=False)
+    amount = db.Column(db.Float(
+        precision=16, asdecimal=True, decimal_return_scale=2), nullable=False)
     date = db.Column(db.Date, nullable=False)
     user_email = db.Column(db.String(120), db.ForeignKey('users.email'),
         nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'),
         nullable=False)
+
+    def save(self):
+        """Save user"""
+        db.session.add(self)
+        db.session.commit()
+
+    def serialize(self):
+        return {
+            "bid_id": self.id,
+            "bidder_name": Users.query.filter_by(
+                email=self.user_email).first().username,
+            "amount": float(self.amount),
+            "date": self.date,
+            "project": self.project_id,
+        }

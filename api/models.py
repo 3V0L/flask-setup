@@ -54,6 +54,8 @@ class Projects(db.Model):
 
     def save(self):
         """Save user"""
+        self.percentage_return = float(self.percentage_return)
+        self.contract_value = float(self.contract_value)
         if self.contract_value < 1 or self.percentage_return < 1:
             json_abort("Contract value and percentage return must" 
                         "be positive numbers", 400)
@@ -136,6 +138,13 @@ class Bids(db.Model):
     def delete(self):
         db.session.delete(self)
         db.session.commit()
+
+    def get_bid(email, id):
+        bid = Bids.query.filter_by(
+            user_email=email, id=id).first()
+        if not bid:
+            json_abort({'msg': 'You dont have access to this bid.'}, 401)
+        return bid
 
     def serialize(self):
         return {

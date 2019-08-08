@@ -2,8 +2,10 @@ import datetime
 from flask import Blueprint, jsonify, request
 
 from api.models import Users, Projects, Bids
-from api.utils import RegisterUserSchema, CreateProjectSchema,
-    EmailPasswordSchema
+from api.utils import RegisterUserSchema, CreateProjectSchema,\
+    EmailPasswordSchema, UpdateProjectSchema, DeleteProjectSchema, \
+    DeleteBidSchema, check_valid, BidSchema, UpdateBidSchema
+    
 
 api = Blueprint('api', __name__)
 
@@ -22,9 +24,7 @@ def register():
         'email': request.json.get('email'),
         'password': request.json.get('password'),
     }
-    err = RegisterUserSchema().validate(data)
-    if err:
-        return jsonify(err), 400
+    check_valid(RegisterUserSchema().validate(data))
 
     user = Users(
         username=data['username'], email=data['email'],
@@ -45,9 +45,7 @@ def create_project():
         'percentage_return': request.json.get('return'),
         'end_date': request.json.get('end_date'),
     }
-    err = CreateProjectSchema().validate(data)
-    if err:
-        return jsonify(err), 400
+    check_valid(CreateProjectSchema().validate(data))
 
     user = Users.get_user(data['email'], data['password'])
     project = Projects(
@@ -89,9 +87,8 @@ def my_projects():
         'email': request.json.get('email'),
         'password': request.json.get('password'),
     }
-    err = EmailPasswordSchema().validate(data)
-    if err:
-        return jsonify(err), 400
+    check_valid(EmailPasswordSchema().validate(data))
+
     user = Users.get_user(data['email'], data['password'])
     projects = Projects.query.filter_by(user_email=user.email)
     res = list()
@@ -105,10 +102,6 @@ def my_projects():
 @api.route('/project/update', methods=['PATCH'])
 def update_projects():
     """Get all projects"""
-    user = Users.get_user(request.json['email'], request.json['password'])
-    projects = Projects.query.filter_by(
-        user_email=user.email, id=request.json['project_id']).first()
-
     changes = {
         "name": request.json.get('name'),
         "description": request.json.get('description'),
@@ -116,14 +109,29 @@ def update_projects():
         "percentage_return": request.json.get('percentage_return'),
         "end_date": request.json.get('end_date'),
     }
+    data = changes.copy()
+    data.update({
+        'email': request.json.get('email'),
+        'password': request.json.get('password'),
+        'project_id': request.json.get('project_id'),
+    })
+    check_valid(UpdateProjectSchema().validate(data))
+   
+    user = Users.get_user(data['email'], data['password'])
+    projects = Projects.query.filter_by(
+        user_email=user.email, id=data['project_id']).first()
+
+   
     total_bids = 0
     for item in projects.bids_received:
         total_bids = total_bids + float(item.amount)
-    if changes['contract_value'] != None or \
+
+    if changes['contract_value'] != None and \
             float(changes['contract_value']) < total_bids:
         return jsonify({
             "msg": "Cannot reduce amount below total bids ({})".format(
                 total_bids)})
+
     for key in changes:
         if changes[key] is None:
             continue
@@ -138,11 +146,18 @@ def update_projects():
 @api.route('/project/delete', methods=['DELETE'])
 def delete_projects():
     """Get all projects"""
-    user = Users.get_user(request.json['email'], request.json['password'])
+    data = {
+        'email': request.json.get('email'),
+        'password': request.json.get('password'),
+        'project_id': request.json.get('project_id'),
+    }
+    check_valid(DeleteProjectSchema().validate(data))
+
+    user = Users.get_user(data['email'], data['password'])
     project = Projects.query.filter_by(
-        user_email=user.email, id=request.json['project_id']).first()
+        user_email=user.email, id=data['project_id']).first()
     if project is None:
-        return jsonify({'msg': "You do not own this item"}), 400
+        return jsonify({'msg': "Access Denied"}), 400
     project.delete()
 
     return jsonify({'msg': "Deleted"}), 200
@@ -152,16 +167,20 @@ def delete_projects():
 def bid_to_project():
     """Bid to fund a project"""
     data = {
-        'amount': float(request.json['amount']),
-        'date': str(datetime.date.today()),
+        'email': request.json.get('email'),
+        'password': request.json.get('password'),
+        'amount': request.json.get('amount'),
+        'project_id': request.json.get('project_id'),
     }
+    check_valid(BidSchema().validate(data))
 
-    user = Users.get_user(request.json['email'], request.json['password'])
+    data['amount'] = float(data['amount'])
+    user = Users.get_user(data['email'], data['password'])
     project = Projects.get_project(
         request.json['project_id'], data['amount'])
 
     bid = Bids(
-        amount=data['amount'], date=data['date'],
+        amount=data['amount'], date=datetime.date.today(),
         user_email=user.email, project_id=project.id,)
     bid.save()
 
@@ -180,9 +199,16 @@ def bid_to_project():
 @api.route('/bid/update', methods=['PATCH'])
 def update_bid():
     """Get all projects"""
-    user = Users.get_user(request.json['email'], request.json['password'])
-    bid = Bids.query.filter_by(
-        user_email=user.email, id=request.json['bid_id']).first()
+    data = {
+        'email': request.json.get('email'),
+        'password': request.json.get('password'),
+        'amount': request.json.get('amount'),
+        'bid_id': request.json.get('bid_id'),
+    }
+    check_valid(UpdateBidSchema().validate(data))
+
+    user = Users.get_user(data['email'], data['password'])
+    bid = Bids.get_bid(data['email'], data['bid_id'])
     project = Projects.get_project(bid.project_id, 0)
     
     total_bids = 0
@@ -211,10 +237,18 @@ def update_bid():
 @api.route('/bid/delete', methods=['DELETE'])
 def delete_bid():
     """Get all projects"""
-    user = Users.get_user(request.json['email'], request.json['password'])
+    data = {
+        'email': request.json.get('email'),
+        'password': request.json.get('password'),
+        'bid_id': request.json.get('bid_id'),
+    }
+    err = DeleteBidSchema().validate(data)
+    if err:
+        return jsonify(err), 400
+    user = Users.get_user(data['email'], data['password'])
 
     bid = bid = Bids.query.filter_by(
-        user_email=user.email, id=request.json['bid_id']).first()
+        user_email=user.email, id=data['bid_id']).first()
     if bid is None:
         return jsonify({'msg': "This bid was not found"}), 404
 

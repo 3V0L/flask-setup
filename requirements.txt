@@ -12,6 +12,7 @@ Jinja2==2.10.1
 lazy-object-proxy==1.4.1
 Mako==1.1.0
 MarkupSafe==1.1.1
+marshmallow==2.19.5
 mccabe==0.6.1
 pep8==1.7.1
 psycopg2==2.8.3

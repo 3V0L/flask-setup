@@ -1,8 +1,9 @@
 import datetime
 
-from flask import abort
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+
+from api.utils import json_abort
 
 db = SQLAlchemy()
 
@@ -13,11 +14,15 @@ class Users(db.Model):
     username = db.Column(db.String(80), unique=False, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(256), unique=False, nullable=False)
-    projects_owned = db.relationship('Projects', backref='users', lazy=True)
-    bids_sent = db.relationship('Bids', backref='users', lazy=True)
+    projects_owned = db.relationship(
+        'Projects', backref='users', passive_deletes=True, lazy=True)
+    bids_sent = db.relationship(
+        'Bids', backref='users', passive_deletes=True, lazy=True)
 
     def save(self):
         """Save user"""
+        if Users.query.filter_by(email=self.email).first():
+           json_abort({'msg': 'User exists.'}, 409) 
         self.password = generate_password_hash(self.password)
         db.session.add(self)
         db.session.commit()
@@ -25,7 +30,7 @@ class Users(db.Model):
     def get_user(email, password):
         user = Users.query.filter_by(email=email).first()
         if user is None or not check_password_hash(user.password, password):
-            abort(401, 'Invalid Email/Password entered')
+            json_abort({'msg': 'Invalid Email/Password entered'}, 401)
         return user
 
 
@@ -42,25 +47,34 @@ class Projects(db.Model):
     start_date = db.Column(db.Date, unique=False, nullable=False)
     end_date = db.Column(db.Date, unique=False, nullable=False)
     active = db.Column(db.Boolean, default=True)
-    user_email = db.Column(db.String(120), db.ForeignKey('users.email'),
-        nullable=False)
-    bids_received = db.relationship('Bids', backref='projects', lazy=True)
+    user_email = db.Column(db.String(120), db.ForeignKey(
+        'users.email', ondelete='CASCADE'), nullable=False)
+    bids_received = db.relationship(
+        'Bids', backref='projects', passive_deletes=True, lazy=True)
 
     def save(self):
         """Save user"""
+        if self.contract_value < 1 or self.percentage_return < 1:
+            json_abort("Contract value and percentage return must" 
+                        "be positive numbers", 400)
         db.session.add(self)
+        db.session.commit()
+    
+    def delete(self):
+        db.session.delete(self)
         db.session.commit()
 
     def get_project(project_id, bid_amount):
         project = Projects.query.filter_by(id=project_id).first()
         if project is None:
-            abort(400, 'This project Id is not in our system')
+            json_abort(
+                {'msg': 'This project is not available'}, 404)
         if project.end_date < datetime.date.today():
             project.active = False
             project.save()
-            abort(403, 'The end date for this project has passed.'
-                        ' You can no longer bid on it.')
-        
+            json_abort(
+                {'msg': 'The end date for this project has passed.'
+                        ' You can no longer bid on it.'}, 403)
         total_bids = 0
         for item in project.bids_received:
             total_bids = total_bids + float(item.amount)
@@ -69,13 +83,15 @@ class Projects(db.Model):
             project.end_date < datetime.date.today():
             project.active = False
             project.save()
-            abort(400, 'This project has been closed. No more' 
-                        ' investments are allowed')
+            msg = {'msg': 'This project has been closed. No more' 
+                            ' investments are allowed'}
+            json_abort(msg, 400)
 
         if (total_bids + bid_amount) > project.contract_value:
-            abort(400, f'The amount you want to invest is too much.'
-                        ' You can only invest {}'.format(
-                            (float(project.contract_value) - total_bids)))
+            msg = {'msg': f'The amount you want to invest is too much.'
+                    ' You can only invest {}'.format(
+                        (float(project.contract_value) - total_bids))}
+            json_abort(msg, 400)
         
         return project
     
@@ -107,14 +123,18 @@ class Bids(db.Model):
     amount = db.Column(db.Float(
         precision=16, asdecimal=True, decimal_return_scale=2), nullable=False)
     date = db.Column(db.Date, nullable=False)
-    user_email = db.Column(db.String(120), db.ForeignKey('users.email'),
-        nullable=False)
-    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'),
-        nullable=False)
+    user_email = db.Column(db.String(120), db.ForeignKey(
+        'users.email', ondelete='CASCADE'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey(
+        'projects.id', ondelete='CASCADE'), nullable=False)
 
     def save(self):
         """Save user"""
         db.session.add(self)
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
         db.session.commit()
 
     def serialize(self):

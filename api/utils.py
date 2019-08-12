@@ -23,6 +23,7 @@ class EmailPasswordSchema(Schema):
 class RegisterUserSchema(EmailPasswordSchema):
     username = fields.Str(required=True, validate=Length(min=3, max=80))
 
+
 class CreateProjectSchema(EmailPasswordSchema):
     name = fields.Str(required=True, validate=Length(min=3, max=80))
     description = fields.Str(required=True, validate=Length(min=10, max=256))
@@ -51,6 +52,8 @@ class UpdateProjectSchema(EmailPasswordSchema):
 
     @validates('end_date')
     def is_not_in_past(self, value):
+        if not value:
+            return True
         if value <= datetime.date.today():
             json_abort({'msg': "The end date must be in the future."}, 400)
 
@@ -61,10 +64,12 @@ class DeleteProjectSchema(EmailPasswordSchema):
 
 class DeleteBidSchema(EmailPasswordSchema):
     bid_id = fields.Int(required=True, validate=Range(min=1))
-    
+
+
 class BidSchema(DeleteProjectSchema):
     amount = fields.Float(
         required=False, allow_none=True, validate=Range(min=1, max=1000000))
+
 
 class UpdateBidSchema(DeleteBidSchema):
     amount = fields.Float(

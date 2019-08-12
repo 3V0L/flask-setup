@@ -3,7 +3,7 @@
 # Project Bids
 A simple flask API that allows a user to create projects and get bids for funding the project. It also allows a user to bid on projects, all that is needed is an email and a user name.
 
-The live link for the app => [https://sample-tapiwa.herokuapp.com/](https://sample-tapiwa.herokuapp.com/)
+The live link for the app => [HEROKU](https://intense-cove-92333.herokuapp.com/)
 
 ### Postman Collection
 Download this JSON Collection file and import it to your Postman App. It contains endpoints and data that can be used to interact with the API
@@ -39,9 +39,8 @@ Download this JSON Collection file and import it to your Postman App. It contain
 
   - Run initial migrations
   ```
-  $ python manage.py db init
-  $ python manage.py db migrate
   $ python manage.py db upgrade
+  $ python manage.py db migrate
   ```
 
   - Run 

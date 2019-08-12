@@ -13,7 +13,9 @@ api = Blueprint('api', __name__)
 @api.route('/', methods=['GET'])
 def home():
     """Returns home page for API"""
-    return jsonify({'msg': 'Welcome to the API!'}), 200
+    return jsonify({'msg': 'Welcome to the API! To use this API follow the'
+                    'instructions on this link https://github.com/3V0L/'
+                    'flask-setup/blob/master/README.md'}), 200
 
 
 @api.route('/register', methods=['POST'])

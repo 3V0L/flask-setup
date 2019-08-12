@@ -21,13 +21,19 @@
 							}
 						],
 						"url": {
-							"raw": "{{url}}/project/get-project",
+							"raw": "{{url}}/project/get-project?id=1",
 							"host": [
 								"{{url}}"
 							],
 							"path": [
 								"project",
 								"get-project"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "1"
+								}
 							]
 						}
 					},
@@ -79,7 +85,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample1234\",\n\t\"end_date\": \"2019-12-03\",\n\t\"value\": 300,\n\t\"project_id\": 16\n}"
+							"raw": "{\n\t\"email\": \"sample123@mail.com\",\n\t\"password\": \"Sample123\",\n\t\"end_date\": \"2021-12-03\",\n\t\"value\": 90000,\n\t\"project_id\": 1\n}"
 						},
 						"url": {
 							"raw": "{{url}}/project/update",
@@ -108,7 +114,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\",\n\t\"project_id\": 15\n}"
+							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\",\n\t\"project_id\": 1\n}"
 						},
 						"url": {
 							"raw": "{{url}}/project/delete",
@@ -137,7 +143,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"email\": \"sample123@mail.com\",\n\t\"password\": \"Sample1234\",\n\t\"name\": \"Project 123\",\n\t\"description\": \"This is a description\",\n\t\"value\": 50000,\n\t\"return\": \"34.677097\",\n\t\"end_date\": \"2019/09/14\"\n}"
+							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\",\n\t\"name\": \"Project 123\",\n\t\"description\": \"This is a description\",\n\t\"value\": 50000,\n\t\"return\": \"34.677097\",\n\t\"end_date\": \"2021/09/14\"\n}"
 						},
 						"url": {
 							"raw": "{{url}}/project/create",
@@ -174,7 +180,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"email\": \"sample@mail.com\",\n\t\"password\": \"Sample123\"\n}"
+							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\"\n}"
 						},
 						"url": {
 							"raw": "{{url}}/bid/my-bids",
@@ -203,7 +209,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\",\n\t\"bid_id\": 12,\n\t\"amount\": 100\n}"
+							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\",\n\t\"bid_id\": 2,\n\t\"amount\": 300\n}"
 						},
 						"url": {
 							"raw": "{{url}}/bid/update",
@@ -232,7 +238,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\",\n\t\"bid_id\": 11\n}"
+							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\",\n\t\"bid_id\": 2\n}"
 						},
 						"url": {
 							"raw": "{{url}}/bid/delete",
@@ -261,7 +267,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\",\n\t\"amount\": \"632.96\",\n\t\"project_id\": 16\n}"
+							"raw": "{\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\",\n\t\"amount\": \"30\",\n\t\"project_id\": 1\n}"
 						},
 						"url": {
 							"raw": "{{url}}/bid/create",
@@ -295,7 +301,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"username\": \"Testing\",\n\t\n\t\"password\": \"Sample123\"\n}"
+							"raw": "{\n\t\"username\": \"Testing\",\n\t\"email\": \"sample1@mail.com\",\n\t\"password\": \"Sample123\"\n}"
 						},
 						"url": {
 							"raw": "{{url}}/register",

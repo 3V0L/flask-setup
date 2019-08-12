@@ -5,7 +5,7 @@ from api.models import Users, Projects, Bids
 from api.utils import RegisterUserSchema, CreateProjectSchema,\
     EmailPasswordSchema, UpdateProjectSchema, DeleteProjectSchema, \
     DeleteBidSchema, check_valid, BidSchema, UpdateBidSchema
-    
+
 
 api = Blueprint('api', __name__)
 
@@ -35,7 +35,7 @@ def register():
 
 @api.route('/project/create', methods=['POST'])
 def create_project():
-    """Register a user"""
+    """Create a project"""
     data = {
         'email': request.json.get('email'),
         'password': request.json.get('password'),
@@ -63,6 +63,7 @@ def create_project():
         'data': data,
         }), 201
 
+
 @api.route('/project/get-project', methods=['GET'])
 def get_projects():
     """Get all projects"""
@@ -74,15 +75,16 @@ def get_projects():
         projects = Projects.query.filter_by(active=True).all()
     res = list()
     for item in projects:
-        if item.active == False:
+        if item.active is False:
             continue
         res.append(Projects.serialize(item))
 
     return jsonify({'data': res}), 200
 
+
 @api.route('/project/my-projects', methods=['GET'])
 def my_projects():
-    """Get all projects"""
+    """Get single user's projects"""
     data = {
         'email': request.json.get('email'),
         'password': request.json.get('password'),
@@ -93,15 +95,16 @@ def my_projects():
     projects = Projects.query.filter_by(user_email=user.email)
     res = list()
     for item in projects:
-        if item.active == False:
+        if item.active is False:
             continue
         res.append(Projects.serialize(item))
 
     return jsonify({'data': res}), 200
 
+
 @api.route('/project/update', methods=['PATCH'])
 def update_projects():
-    """Get all projects"""
+    """Update a single project"""
     changes = {
         "name": request.json.get('name'),
         "description": request.json.get('description'),
@@ -116,18 +119,17 @@ def update_projects():
         'project_id': request.json.get('project_id'),
     })
     check_valid(UpdateProjectSchema().validate(data))
-   
+
     user = Users.get_user(data['email'], data['password'])
     projects = Projects.query.filter_by(
         user_email=user.email, id=data['project_id']).first()
 
-   
     total_bids = 0
     if projects:
         for item in projects.bids_received:
             total_bids = total_bids + float(item.amount)
 
-        if changes['contract_value'] != None and \
+        if changes['contract_value'] is not None and \
                 float(changes['contract_value']) < total_bids:
             return jsonify({
                 "msg": "Cannot reduce amount below total bids ({})".format(
@@ -148,7 +150,7 @@ def update_projects():
 
 @api.route('/project/delete', methods=['DELETE'])
 def delete_projects():
-    """Get all projects"""
+    """Delete a project"""
     data = {
         'email': request.json.get('email'),
         'password': request.json.get('password'),
@@ -201,7 +203,7 @@ def bid_to_project():
 
 @api.route('/bid/update', methods=['PATCH'])
 def update_bid():
-    """Get all projects"""
+    """Update a bid"""
     data = {
         'email': request.json.get('email'),
         'password': request.json.get('password'),
@@ -213,7 +215,7 @@ def update_bid():
     user = Users.get_user(data['email'], data['password'])
     bid = Bids.get_bid(data['email'], data['bid_id'])
     project = Projects.get_project(bid.project_id, 0)
-    
+
     total_bids = 0
     current_amnt = float(bid.amount)
     new_amnt = float(request.json['amount'])
@@ -239,7 +241,7 @@ def update_bid():
 
 @api.route('/bid/delete', methods=['DELETE'])
 def delete_bid():
-    """Get all projects"""
+    """Delete a bid"""
     data = {
         'email': request.json.get('email'),
         'password': request.json.get('password'),
@@ -257,14 +259,15 @@ def delete_bid():
 
     # Retrieve project to check whether project still active
     project = Projects.get_project(bid.project_id, 0)
-    
+
     bid.delete()
 
     return jsonify({'msg': "Bid Deleted"}), 200
 
+
 @api.route('/bid/my-bids', methods=['GET'])
 def my_bids():
-    """Get all projects"""
+    """Get my bid"""
     data = {
         'email': request.json.get('email'),
         'password': request.json.get('password'),
@@ -284,4 +287,4 @@ def my_bids():
         item['project'] = project
         res.append(item)
 
-    return jsonify({'data': res }), 200
+    return jsonify({'data': res}), 200

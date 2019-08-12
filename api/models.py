@@ -7,6 +7,7 @@ from api.utils import json_abort
 
 db = SQLAlchemy()
 
+
 class Users(db.Model):
     __tablename__ = "users"
 
@@ -22,12 +23,13 @@ class Users(db.Model):
     def save(self):
         """Save user"""
         if Users.query.filter_by(email=self.email).first():
-           json_abort({'msg': 'User exists.'}, 409) 
+            json_abort({'msg': 'User exists.'}, 409)
         self.password = generate_password_hash(self.password)
         db.session.add(self)
         db.session.commit()
-    
+
     def get_user(email, password):
+        """Retrieve a user if their credentials are correct"""
         user = Users.query.filter_by(email=email).first()
         if user is None or not check_password_hash(user.password, password):
             json_abort({'msg': 'Invalid Email/Password entered'}, 401)
@@ -53,20 +55,23 @@ class Projects(db.Model):
         'Bids', backref='projects', passive_deletes=True, lazy=True)
 
     def save(self):
-        """Save user"""
+        """Save Project"""
         self.percentage_return = float(self.percentage_return)
         self.contract_value = float(self.contract_value)
         if self.contract_value < 1 or self.percentage_return < 1:
-            json_abort("Contract value and percentage return must" 
-                        "be positive numbers", 400)
+            json_abort(
+                "Contract value and percentage return must"
+                "be positive numbers", 400)
         db.session.add(self)
         db.session.commit()
-    
+
     def delete(self):
+        """Delete Project"""
         db.session.delete(self)
         db.session.commit()
 
     def get_project(project_id, bid_amount):
+        """Retrieve a project if it is valid"""
         project = Projects.query.filter_by(id=project_id).first()
         if project is None:
             json_abort(
@@ -82,22 +87,23 @@ class Projects(db.Model):
             total_bids = total_bids + float(item.amount)
 
         if float(project.contract_value) - total_bids < 1 or \
-            project.end_date < datetime.date.today():
+                project.end_date < datetime.date.today():
             project.active = False
             project.save()
-            msg = {'msg': 'This project has been closed. No more' 
-                            ' investments are allowed'}
+            msg = {'msg': 'This project has been closed. No more'
+                   ' investments are allowed'}
             json_abort(msg, 400)
 
         if (total_bids + bid_amount) > project.contract_value:
             msg = {'msg': f'The amount you want to invest is too much.'
-                    ' You can only invest {}'.format(
+                   ' You can only invest {}'.format(
                         (float(project.contract_value) - total_bids))}
             json_abort(msg, 400)
-        
+
         return project
-    
+
     def serialize(self):
+        """Format data into JSON acceptable structure"""
         data = {
             "project_id": self.id,
             "description": self.description,
@@ -112,7 +118,7 @@ class Projects(db.Model):
         bids = []
         for item in self.bids_received:
             res = Bids.serialize(item)
-            bids.append(res) 
+            bids.append(res)
         data['bids'] = bids
 
         return data
@@ -131,15 +137,17 @@ class Bids(db.Model):
         'projects.id', ondelete='CASCADE'), nullable=False)
 
     def save(self):
-        """Save user"""
+        """Save bid"""
         db.session.add(self)
         db.session.commit()
 
     def delete(self):
+        """Delete bid"""
         db.session.delete(self)
         db.session.commit()
 
     def get_bid(email, id):
+        """Retrieve bid if valid"""
         bid = Bids.query.filter_by(
             user_email=email, id=id).first()
         if not bid:
@@ -147,6 +155,7 @@ class Bids(db.Model):
         return bid
 
     def serialize(self):
+        """Format bid data for JSON"""
         return {
             "bid_id": self.id,
             "bidder_name": Users.query.filter_by(

@@ -123,25 +123,28 @@ def update_projects():
 
    
     total_bids = 0
-    for item in projects.bids_received:
-        total_bids = total_bids + float(item.amount)
+    if projects:
+        for item in projects.bids_received:
+            total_bids = total_bids + float(item.amount)
 
-    if changes['contract_value'] != None and \
-            float(changes['contract_value']) < total_bids:
+        if changes['contract_value'] != None and \
+                float(changes['contract_value']) < total_bids:
+            return jsonify({
+                "msg": "Cannot reduce amount below total bids ({})".format(
+                    total_bids)}), 400
+
+        for key in changes:
+            if changes[key] is None:
+                continue
+            setattr(projects, key, changes[key])
+        projects.save()
+
         return jsonify({
-            "msg": "Cannot reduce amount below total bids ({})".format(
-                total_bids)})
+            'msg': "Success",
+            'data': projects.serialize()
+            }), 200
+    return jsonify({'msg': "Access Denied."}), 401
 
-    for key in changes:
-        if changes[key] is None:
-            continue
-        setattr(projects, key, changes[key])
-    projects.save()
-
-    return jsonify({
-        'msg': "Success",
-        'data': projects.serialize()
-        }), 200
 
 @api.route('/project/delete', methods=['DELETE'])
 def delete_projects():
@@ -157,7 +160,7 @@ def delete_projects():
     project = Projects.query.filter_by(
         user_email=user.email, id=data['project_id']).first()
     if project is None:
-        return jsonify({'msg': "Access Denied"}), 400
+        return jsonify({'msg': "Access Denied"}), 401
     project.delete()
 
     return jsonify({'msg': "Deleted"}), 200
@@ -191,7 +194,7 @@ def bid_to_project():
         float(project.percentage_return) / 100 * data['amount'])
 
     return jsonify({
-        'message': 'Project Created Successfully.',
+        'message': 'Bid Created Successfully.',
         'data': data,
         }), 201
 
@@ -231,7 +234,7 @@ def update_bid():
     return jsonify({
         'message': 'Updated Bid.',
         'data': bid.serialize(),
-        }), 201
+        }), 200
 
 
 @api.route('/bid/delete', methods=['DELETE'])
@@ -247,9 +250,9 @@ def delete_bid():
         return jsonify(err), 400
     user = Users.get_user(data['email'], data['password'])
 
-    bid = bid = Bids.query.filter_by(
+    bid = Bids.query.filter_by(
         user_email=user.email, id=data['bid_id']).first()
-    if bid is None:
+    if not bid:
         return jsonify({'msg': "This bid was not found"}), 404
 
     # Retrieve project to check whether project still active

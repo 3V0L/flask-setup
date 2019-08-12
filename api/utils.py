@@ -51,6 +51,8 @@ class UpdateProjectSchema(EmailPasswordSchema):
 
     @validates('end_date')
     def is_not_in_past(self, value):
+        if not value:
+            return True
         if value <= datetime.date.today():
             json_abort({'msg': "The end date must be in the future."}, 400)
 

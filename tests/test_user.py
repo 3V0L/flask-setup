@@ -4,6 +4,10 @@ from tests.base import BaseTestCase
 
 
 class TestUser(BaseTestCase):
+
+    def test_api_running(self):
+        res = self.client.get('/', content_type='application/json')
+        self.assertEqual(res.status_code, 200)
     
     def test_user_registration(self):
         register = self.client.post('/register', data=json.dumps({
